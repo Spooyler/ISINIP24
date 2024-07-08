@@ -10,16 +10,19 @@ data = example_data #as np.array; shape (n,) where n is the length of the profil
 x = np.arange(len(data)).reshape(-1, 1)
 y = data.reshape(-1, 1)
 
-# Split the data into training and validation sets
-x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=42)
+# Split the data into training, validation, and testing sets
+x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.3, random_state=42)
+x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
 
 # Normalize the data
 scaler_x = MinMaxScaler()
 scaler_y = MinMaxScaler()
 x_train_normalized = scaler_x.fit_transform(x_train)
 x_val_normalized = scaler_x.transform(x_val)
+x_test_normalized = scaler_x.transform(x_test)
 y_train_normalized = scaler_y.fit_transform(y_train)
 y_val_normalized = scaler_y.transform(y_val)
+y_test_normalized = scaler_y.transform(y_test)
 
 # Define the neural network model
 model = tf.keras.Sequential([
@@ -38,18 +41,25 @@ early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=1
 # Train the model with early stopping
 history = model.fit(x_train_normalized, y_train_normalized, epochs=500, validation_data=(x_val_normalized, y_val_normalized), callbacks=[early_stopping], verbose=0)
 
+# Evaluate the model on the test set
+test_loss = model.evaluate(x_test_normalized, y_test_normalized, verbose=0)
+print(f'Test Loss: {test_loss}')
+
 # Predict the profile using the trained model
 y_pred_train_normalized = model.predict(x_train_normalized).flatten()
 y_pred_val_normalized = model.predict(x_val_normalized).flatten()
+y_pred_test_normalized = model.predict(x_test_normalized).flatten()
 
 # Inverse transform the predictions
 y_pred_train = scaler_y.inverse_transform(y_pred_train_normalized.reshape(-1, 1)).flatten()
 y_pred_val = scaler_y.inverse_transform(y_pred_val_normalized.reshape(-1, 1)).flatten()
+y_pred_test = scaler_y.inverse_transform(y_pred_test_normalized.reshape(-1, 1)).flatten()
 
-# Combine the training and validation predictions for full profile plotting
+# Combine the training, testing  and validation predictions for full profile plotting
 y_pred = np.zeros_like(y.flatten())
 y_pred[x_train.flatten()] = y_pred_train
 y_pred[x_val.flatten()] = y_pred_val
+y_pred[x_test.flatten()] = y_pred_test
 
 # Plot the original, smoothed signal, and model predictions
 plt.figure(figsize=(10, 6))
